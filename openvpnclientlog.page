@@ -1,0 +1,20 @@
+Menu="openvpnclient:2"
+Title="Logs"
+---
+
+<div>
+<table class="tablesorter openvpnclientlog">
+<thead><th colspan="2"><b>OpenVPN Client Logs:&nbsp;<img src='/plugins/openvpnclient/images/new_config.png'></b></th><th class="header"></th></thead>
+<tr>
+	<td><textarea class="tooltip" title="Information about the OpenVPN log is displayed in this area" wrap="hard" readonly="yes" style="width: 800px; height: 250px;color: green;font-size: 8pt"><?php echo $logstring; ?></textarea></td>
+        </tr>
+	<br />
+ 	
+     <tr>	   	
+     <td><textarea class="tooltip" title="Information from 'ip route show'  is displayed here.." wrap="hard" readonly="yes" style="width: 800px; height: 130px;color: green;font-size: 8pt"><?php echo $check_netstat; ?></textarea></td>
+     </tr>
+       	<td><textarea class="tooltip" title="Information about the OpenVPN status is displayed in this area" wrap="hard" readonly="yes" style="width: 800px; height: 130px;color: green;font-size: 8pt"><?php echo $statuslogstring; ?></textarea></td>
+     <br />
+<br />
+</table>
+</div>

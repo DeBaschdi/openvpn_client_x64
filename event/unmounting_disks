@@ -1,0 +1,6 @@
+#!/bin/bash
+source /boot/config/plugins/openvpnclient/openvpnclient.cfg
+if [[ "$DISCONNECT_ON_UMOUNT" == "yes" ]]; then
+	logger "Stopping OpenVPN Client"
+	/usr/local/emhttp/plugins/openvpnclient/scripts/rc.openvpnclient stop | logger
+fi

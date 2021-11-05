@@ -1,0 +1,379 @@
+#!/bin/bash
+
+openvpnclient_updatecfg()
+{
+# Arguments file used for WEBUI configuration update
+ ARGUMENTS_FILE="/usr/local/emhttp/plugins/openvpnclient/openvpn.args"
+
+ [ -f $ARGUMENTS_FILE ] && source $ARGUMENTS_FILE
+
+USER=$USER_NEW
+PASS=$PASS_NEW
+START_ON_MOUNT=$START_ON_MOUNT_NEW
+PLG_EXT=$PLG_EXT_NEW
+PLG_PASSWORD=$PLG_PASSWORD_NEW
+OVPNCHOOSE=$OVPNCHOOSE_NEW
+DISCONNECT_ON_UMOUNT=$DISCONNECT_ON_UMOUNT_NEW
+
+  write_cfg
+  
+}
+
+#################
+# W R I T E C F G
+#################
+write_cfg()
+{ 
+  echo "# openvpn client plugin configuration file" > /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  echo "USER=\"$USER\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  echo "PASS=\"$PASS\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  echo "START_ON_MOUNT=\"$START_ON_MOUNT\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  echo "PLG_EXT=\"$PLG_EXT\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  echo "PLG_PASSWORD=\"$PLG_PASSWORD\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  echo "OVPNCHOOSE=\"$OVPNCHOOSE\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  echo "DISCONNECT_ON_UMOUNT=\"$DISCONNECT_ON_UMOUNT\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  
+  echo $USER > /boot/config/plugins/openvpnclient/password.txt
+  echo $PASS >> /boot/config/plugins/openvpnclient/password.txt
+
+  logger -trc.openvpnclient -plocal7.info -is "Plugin configuration written"
+}
+
+
+openvpnclient_start() {
+source /boot/config/plugins/openvpnclient/openvpnclient.cfg
+
+update_ovpn_interface
+
+alive=$(check_alive)
+
+if [ $alive = "no" ]; then
+
+  sleep 0.5
+#  update_ovpn_interface
+	  
+		if [[ $PLG_PASSWORD = "yes" ]]; then
+	  	echo "Updating the ovpn file..."
+	  	openvpnclient_update_ovpn
+	  else
+	  	echo "No change was done to the ovpn file"	
+	  fi
+  
+  sleep 0.5
+ 
+echo "Changing to the folder where the openvpn config files belong"
+openvpnpath=${OVPNCHOOSE%/*}
+
+cd $openvpnpath
+
+echo $openvpnpath
+echo "sudo -H -u root openvpn --writepid /var/run/openvpn/openvpn.pid --script-security 3 --mute-replay-warnings --config \"$OVPNCHOOSE\" &" > /tmp/openvpn/openvpn.sh
+        chmod 777 /tmp/openvpn/openvpn.sh
+        sleep 0.5
+        #nohup /tmp/openvpn/openvpn.sh >  /tmp/openvpn/openvpn.out /dev/null &
+        sudo -H -u root /bin/bash -c "nohup /tmp/openvpn/openvpn.sh >  /tmp/openvpn/openvpn.out /dev/null 2>&1 &"
+        sleep 1
+
+
+  echo "Starting Openvpn Tunnel: Please Wait..."
+  rm -f /tmp/openvpn/openvpn.out.error 
+  sleep 12
+
+           
+   # test if we have a connection
+  dev_tun=$(extended_device)
+
+	CONNECTED="`ifconfig -a | grep -A 6 $dev_tun`"
+
+		if [ "$CONNECTED" != "" ]; then
+		   echo "Connected successfully on"  $dev_tun  
+		   sleep 0.5
+		   echo "Logging in to VPN was successfull"
+
+		if [ $PLG_EXT == "Bypass" ]; then
+			echo "Starting bypass IP addresses..."
+			bypasse_IP
+	        fi
+
+		if [ $PLG_EXT == "Specific" ]; then
+			echo "Starting extended routing..."
+			extended_route
+		fi
+			echo "OK... Started"
+		else
+			echo "Not connected! " $dev_tun " not established!!!"
+		   	sleep 0.5
+		   	rm -f /var/run/openvpn/openvpn.pid
+		 	cp /tmp/openvpn/openvpn.out /tmp/openvpn/openvpn.out.error 
+		 fi
+	sleep 2
+  else
+   echo "Client already started"
+fi
+}
+
+openvpnclient_stop() {
+alive=$(check_alive)
+
+if [ $alive = "yes" ]; then
+
+ echo "Stoping Openvpn Tunnel....."
+ sleep 0.5
+
+		kill `ps -ef | grep openvpn.pid | grep -v grep | awk '{print $2}'`
+		rm -f /var/run/openvpn/openvpn.pid
+		rm -rf /tmp/openvpn/openvpn.out
+		echo "Stopped... OK"
+else
+    	echo "Client already stoped"
+fi
+}
+
+openvpnclient_restart() {
+openvpnclient_stop;
+sleep 2	
+openvpnclient_start;	
+}
+
+openvpnclient_status() {
+
+    if [ -e /var/run/openvpn/openvpn.pid ];then
+
+	for process in `ls /var/run/openvpn/openvpn.pid` ; do
+	  echo ${runningpid:= `cat $process` }
+	done
+     else
+       echo ${runningpid:=} 
+    fi
+ }
+
+openvpnclient_update_ovpn() {
+  
+   if grep -R /boot/config/plugins/openvpnclient/password.txt "$OVPNCHOOSE" ; then
+      echo "The ovpn file already has the option --> /boot/config/plugins/openvpnclient/password.txt" 
+    else
+      sed -i '/auth-user-pass/d' "$OVPNCHOOSE"
+      echo -e "\nauth-user-pass /boot/config/plugins/openvpnclient/password.txt" >> "$OVPNCHOOSE"
+      sleep 0.5
+      echo "The ovpn file was updated with -->  /boot/config/plugins/openvpnclient/password.txt" 
+   fi
+
+    if grep -R status "$OVPNCHOOSE" ; then
+      echo "The ovpn file already has the option --> status /tmp/openvpn/openvpn-status.log" 
+    else
+      echo -e "\nstatus /tmp/openvpn/openvpn-status.log" >> "$OVPNCHOOSE"
+      sleep 0.5
+      echo "The ovpn file was updated with -->  status /tmp/openvpn/openvpn-status.log" 
+   fi
+}
+
+update_ovpn_interface() {
+echo "update_ovpn_interface"
+
+  check_dev=`grep 'dev ' "$OVPNCHOOSE"`
+    if [[ $check_dev != "dev tap5" ]] && [[ $check_dev != "dev tun5" ]]; then
+       if grep -q "dev tap" "$OVPNCHOOSE" ; then
+        	sed -i '/dev tap/d' "$OVPNCHOOSE"
+        	sed -i '/client/adev tap5' "$OVPNCHOOSE"
+	        dev_tun=`grep 'dev tap' "$OVPNCHOOSE"`
+        else
+           	sed -i '/dev tun/d' "$OVPNCHOOSE"
+           	sed -i '/client/adev tun5' "$OVPNCHOOSE"
+           	dev_tun=`grep 'dev tun' "$OVPNCHOOSE"`
+	      fi
+    fi
+}
+
+tunnel_IP() {
+	
+tmpinterface=$(check_alive)	
+extended_device >/dev/null
+	
+	if [ $tmpinterface = "yes" ]; then
+		curl -s --max-time 15 --silent checkip.dyndns.org | grep -Eo '[0-9\.]+'
+
+	else
+		curl -s --max-time 15 --silent checkip.dyndns.org | grep -Eo '[0-9\.]+'
+	fi
+}
+
+extended_IP() {
+     extended_device >/dev/null
+     echo "`ifconfig $dev_tun | sed -rn 's/.*r:([^ ]+) .*/\1/p'`"	
+}
+
+extended_device() {
+     check_dev=`grep 'dev ' "$OVPNCHOOSE"`
+     echo ${check_dev:(-4)}
+}
+
+extended_route() {
+
+if [ -e /boot/openvpn/webbadress.txt ];then
+	J=0
+	echo "Starting Routing..."
+	echo "Starting Routing..."  >> /tmp/openvpn/openvpn.out
+	for i in `cat /boot/openvpn/webbadress.txt`
+	   do
+		myip="`ping -c 1 $i | awk 'NR==1{gsub(/\(|\)/,"",$3);print $3}'`"
+#		mynewip="${myip%.*}.0/24"			
+		mynewip="$myip"			
+		echo $myip   "   >>>>>>>   "     $i >> /tmp/openvpn/openvpn.out
+		echo $myip   "   >>>>>>>   "     $i 
+		array=( "${array[@]}" "$mynewip" )
+		echo ${array[J]}
+		(( J++ ))
+	  done
+
+	tunnelip="`ifconfig $dev_tun | sed -rn 's/.*r:([^ ]+) .*/\1/p'`"
+	echo "VPN Gateway: " $tunnelip >> /tmp/openvpn/openvpn.out
+	echo "VPN Gateway: " $tunnelip
+	ip route delete "0.0.0.0/1"
+	ip route delete "128.0.0.0/1"
+
+#echo "********* Routing IP adresses to VPN tunnels********************"
+	for ((I=0; I < J ; I++))
+	 	 do
+#	  	ip route add ${array[I]} via $tunnelip dev $dev_tun
+	  	ip route add ${array[I]} dev $dev_tun
+	   	echo ip route add ${array[I]} dev $dev_tun  >> /tmp/openvpn/openvpn.out
+	   	echo ip route add ${array[I]} dev $dev_tun 
+	 	 done
+    else
+			echo "/boot/openvpn/webbadress.txt don't exist" >> /tmp/openvpn/openvpn.out
+			echo "/boot/openvpn/webbadress.txt don't exist"
+    fi	
+}
+
+get_all_IP() {
+     /sbin/ifconfig |grep -B1 "inet addr" |awk '{ if ( $1 == "inet" ) { print $2 } else if ( $2 == "Link" ) { printf "%s:" ,$1 } }' |awk -F: '{ print $1 ": " $3 }'
+}
+
+bypasse_IP() {
+
+ if [ -e /boot/openvpn/bypassed.txt ];then
+	k=0
+	echo "starting bypassing IP addresses ............. wait...."
+	echo "starting bypassing IP addresses ............. wait"  >> /tmp/openvpn/openvpn.out
+	for j in `cat /boot/openvpn/bypassed.txt`
+	  do
+		myip="`ping -c 1 $j | awk 'NR==1{gsub(/\(|\)/,"",$3);print $3}'`"
+#		mynewip="${myip%.*}.0/24"			
+		mynewip="$myip"			
+		echo $myip   "   >>>>>>>   "     $j >> /tmp/openvpn/openvpn.out
+		echo $myip   "   >>>>>>>   "     $j 
+		array=( "${array[@]}" "$mynewip" )
+		echo ${array[k]}
+		(( k++ ))
+	  done
+
+     localgateway="`ip route show default | grep default | awk {'print $3'}`"
+
+     echo "Your local gateway = " $localgateway >> /tmp/openvpn/openvpn.out
+     echo "Your local gateway = " $localgateway
+  
+ #echo "********* Bypass IP adresses from VPN tunnel********************"
+	for ((l=0; l < k ; l++))
+	  do
+	   ip route add ${array[l]} via $localgateway dev eth0
+	    echo ip route add ${array[l]} via $localgateway dev eth0  >> /tmp/openvpn/openvpn.out
+	    echo ip route add ${array[l]} via $localgateway dev eth0 
+	  done
+   else
+		echo "/boot/openvpn/bypassed.txt don't exist" >> /tmp/openvpn/openvpn.out
+		echo "/boot/openvpn/bypassed.txt don't exist"
+  fi	
+}
+
+extended_running() {
+
+   if grep -q 'PLG_EXT="no"' /boot/config/plugins/openvpnclient/openvpnclient.cfg ; then
+      ext_running="no"
+      echo $ext_running
+    else
+      ext_running="yes"
+      echo  $ext_running
+   fi
+}
+
+openvpnclient_getonlineversion() {
+
+     OPEN_VPN_HOSTING_SERVER="http://openvpn.net/index.php/open-source/downloads.html"
+     # Get latest version number from server
+     OPEN_VPN_ONLINE_VER=$(wget ${OPEN_VPN_HOSTING_SERVER} -q --no-check-certificate -O - |grep "Change Log" | awk 'gsub(/.*OpenVPN | -- released on.*/,"")')
+     echo "${OPEN_VPN_ONLINE_VER:0:6}"
+}
+
+openvpnclient_getlocalversion() {
+
+     # Checking installed OpenVPN version
+      OPEN_VPN_INSTALLED=$(openvpn --version | grep "OpenVPN " | awk 'gsub(/.*i4 | x.*/,"")')
+      echo "${OPEN_VPN_INSTALLED: -6}"
+}
+
+check_alive()
+{
+dev_tun=$(extended_device)
+	
+ if [ $(ifconfig | grep $dev_tun | grep -v grep | wc -l | tr -s "\n") -eq 0 ]; then
+	 echo "no"
+ else
+	echo "yes"
+ fi
+	
+}
+
+# read our configuration
+source /boot/config/plugins/openvpnclient/openvpnclient.cfg
+
+case "$1" in
+'start')
+  openvpnclient_start
+  ;;
+'stop')
+  openvpnclient_stop
+  ;;
+  'restart')
+  openvpnclient_restart
+  ;;
+'updatecfg')
+  openvpnclient_updatecfg
+  ;;
+'status')
+  openvpnclient_status
+  ;;
+'extended_route')
+  extended_route
+  ;;
+'extended_IP')
+  extended_IP
+  ;;
+'extended_device')
+  extended_device
+  ;;
+'extended_running')
+  extended_running
+  ;;
+'getonlineversion')
+  openvpnclient_getonlineversion $2
+  ;;
+'getlocalversion')
+  openvpnclient_getlocalversion $2
+  ;;
+'writecfg')
+  write_cfg
+  ;; 
+'get_all_IP')
+  get_all_IP
+  ;;
+'check_alive')
+  check_alive
+  ;;
+'tunnel_IP')
+  tunnel_IP
+  ;;
+
+  *)
+  
+  echo "usage $0 start|stop"
+esac

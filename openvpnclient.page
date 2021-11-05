@@ -1,0 +1,174 @@
+Menu="NetworkServices"
+Icon="openvpnclient.png"
+Version="2019.11.30"
+Author="Peter_sm"
+Type="xmenu"
+Title="OpenVPN Client"
+Tabs="true"
+---
+<link type="text/css" rel="stylesheet" href="/plugins/openvpnclient/styles/openvpnclient.css">
+<?php
+$logstring="";
+$statuslogstring="";
+$ext_running="";
+$openvpn_cfg = parse_ini_file("/boot/config/plugins/openvpnclient/openvpnclient.cfg");
+$openvpn_running_1 = shell_exec("/usr/local/emhttp/plugins/openvpnclient/scripts/rc.openvpnclient check_alive");
+$openvpn_running = trim($openvpn_running_1);
+$runningpid = shell_exec("/usr/local/emhttp/plugins/openvpnclient/scripts/rc.openvpnclient status");
+$extend_vpn_ip = shell_exec("/usr/local/emhttp/plugins/openvpnclient/scripts/rc.openvpnclient extended_IP");
+$dev_tun = shell_exec("/usr/local/emhttp/plugins/openvpnclient/scripts/rc.openvpnclient extended_device");
+$check_netstat = shell_exec("ip route show");
+$OPEN_VPN_ONLINE_VER = shell_exec("/usr/local/emhttp/plugins/openvpnclient/scripts/rc.openvpnclient getonlineversion");
+$OPEN_VPN_INSTALLED = shell_exec("/usr/local/emhttp/plugins/openvpnclient/scripts/rc.openvpnclient getlocalversion");
+$openvpn_myip = shell_exec("/usr/local/emhttp/plugins/openvpnclient/scripts/rc.openvpnclient tunnel_IP");
+
+if ($openvpn_cfg['PLG_EXT'] != "no") { $ext_running = "yes"; }
+
+    if (file_exists('/tmp/openvpn/openvpn-status.log')) 
+         {$statuslogstring = file_get_contents('/tmp/openvpn/openvpn-status.log');}
+
+    if (file_exists('/tmp/openvpn/openvpn.out')) 
+         {$logstring = file_get_contents('/tmp/openvpn/openvpn.out');}
+            
+    if (file_exists('/tmp/openvpn/openvpn.out.error'))
+         {$logstring = file_get_contents('/tmp/openvpn/openvpn.out.error');}
+?>
+<div>
+	<table class="tablesorter openvpnclient">
+	 	<thead>
+ 			<th colspan="2"><b>Status:&nbsp;</b><img src='/plugins/openvpnclient/images/device_status.png'>
+  			<?if ($openvpn_running=="yes"):?>
+  	      	<span class="green"><b>OpenVPN Client is RUNNING</b></span>
+      	<?else:?>
+        		<span class="red"><b>OpenVPN Client is NOT RUNNING</b></span>
+      	<?endif;?>
+ 			</th>
+	 		<th class="header"></th>
+ 		</thead>
+	</table>
+
+
+<table class="tablesorter">
+      <tr>
+      	<thead>
+         <th style="text-align: left;">CONFIG FILE</th>
+	 <th style="text-align: left;">Connected</th>
+    	 <th style="text-align: left;">WAN IP</th>
+       	 <th style="text-align: left;">Interface</th>
+         <th style="text-align: left;">Extended Routing IP</th>
+        </thead>
+      </tr>
+
+        <tr style="font-weight:bold; background:#FFFFFF;">
+      	<td style="text-align: left;">
+        <span class="blue-text font-size: 6pt"><?=$openvpn_cfg['OVPNCHOOSE'];?></span>
+        </td>
+
+        <td style="text-align: left;">
+			<?if ($openvpn_running=="yes"):?>
+     			 <a target="_blank"><span class="green font-size: 8pt"><b>Yes</b></a></span>
+			<?else:?>
+   			   <a target="_blank"><span class="red font-size: 8pt"><b>No</b></a></b></span>
+		    <?endif;?>	
+        </td>
+
+        <td style="text-align: left;">
+        	<?if ($openvpn_running=="yes"):?>
+				<span class="green-text font-size: 8pt"><?=$openvpn_myip?></span>
+			<?else:?>
+				<span class="red-text font-size: 8pt"><?=$openvpn_myip?></span>
+         	<?endif;?>
+        </td>
+       
+        <td style="text-align: left;">
+			<?if ($openvpn_running=="yes"):?>
+				<span class="green-text font-size: 8pt"><?=$dev_tun?></span>
+			<?else:?>
+				<span class="red-text"></span>
+			<?endif;?>
+        </td>       
+
+        <td style="text-align: left;">
+       		<?if ($openvpn_running=="yes"):?>
+				<?if ($ext_running=="yes"):?>
+					<span class="green-text font-size: 8pt"><?=$extend_vpn_ip?></span>
+				<?else:?>   
+					<span class="red-text font-size: 8pt">None</span>
+				<?endif;?>
+        	<?else:?>  
+				<span class="red-text"> </span>
+			<?endif;?>
+        </td>
+      </tr>
+    </table>
+           
+<br />
+
+ <table class="tablesorter">    
+     <tr>
+     <thead>
+	<th colspan="2" style="text-align: center;">Control Actions</th>
+     </thead>
+     </tr>   
+          
+     <?if ($openvpn_running=="yes"):?>
+        <tr>
+        <td width="30%">
+        <form name="stop_openvpn" method="POST" action="/update.php" target="progressFrame">
+        <input type="hidden" name="#command" value="/plugins/openvpnclient/scripts/rc.openvpnclient">
+        <input type="hidden" name="#arg[1]" value="stop">
+        <input type="submit" value="Stop">
+        
+        </form>
+        </td>
+        <td> <span class="green-text">Stop OpenVPN Client</span></td>
+        </tr>
+   
+     <?else:?>
+          </tr>
+          <tr>
+          <td width="30%">
+          <form name="start_openvpn1" method="POST" action="/update.php" target="progressFrame">
+ 	  <input type="hidden" name="#command" value="/plugins/openvpnclient/scripts/rc.openvpnclient">
+          <input type="hidden" name="#arg[2]" value="start">
+          <input type="submit" value="Start">
+	
+          </form>
+          </td>
+          <td> <span class="red-text">Start OpenVPN Client</span></td>
+          </tr>
+         
+     <?endif;?>
+     <left><table align:'left'>
+        <br>
+	<br>
+	<left><a href='https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=TXFVJQVYZRBBU&lc=SE&item_name=Support my work on the 2 openvpn plugins and my support!&currency_code=EUR' target='_blank'><img src='https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif'></a></left>
+        <br>
+	<left><br><a href='https://forums.lime-technology.com/topic/33783-openvpn-server-client-for-unraid-62-61-are-still-supported/' target='_blank'>Plugin Support Thread</a></left>
+        </table></left>
+    </table>
+</div>
+
+<script type="text/javascript">
+function validateForm() {
+  document.getElementById('USER').disabled = false;
+  document.getElementById('PASS').disabled = false;
+  document.getElementById('START_ON_MOUNT').disabled = false;
+  document.getElementById('PLG_EXT=').disabled = false;
+  document.getElementById('PLG_PASSWORD').disabled = false;
+  document.getElementById('OVPNCHOOSE').disabled = false;
+}
+
+function checkRUNNING(form) {
+  if ("<?=$openvpn_running?>" == "yes") {
+  
+    form.USER.disabled = true;
+    form.PASS.disabled = true;
+    form.START_ON_MOUNT.disabled = true;
+    form.PLG_EXT.disabled = true; 
+    form.PLG_PASSWORD.disabled = true;
+    form.OVPNCHOOSE.disabled = true;
+  }
+}
+
+</script>

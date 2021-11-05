@@ -1,0 +1,173 @@
+<?xml version='1.0' standalone='yes'?>
+
+<!DOCTYPE PLUGIN [
+<!ENTITY name      "openvpnclient">
+<!ENTITY author    "DeBaschdi">
+<!ENTITY plgauthor    "DeBaschdi">
+<!ENTITY version   "2021.11.05.01">
+<!ENTITY gitURL    "https://github.com/&plgauthor;">
+<!ENTITY gitpkgURL    "&gitURL;/packages/raw/master">
+<!ENTITY launch    "Settings/&name;">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/&plgauthor;/openvpn_client_x64/master/openvpn_client_x64.plg">
+<!ENTITY pkgURL	 "https://mirrors.slackware.com/slackware/">
+<!ENTITY pkgs 	    "/boot/packages/">
+<!ENTITY plugin	 "/boot/config/plugins/&name;">
+<!ENTITY emhttp	 "/usr/local/emhttp/plugins/&name;">
+]>
+
+<PLUGIN  name="&name;"
+         author="&author;"
+         plgauthor="&plgauthor;"
+         version="&version;"
+	 gitURL="&gitURL;"
+	 gitpkgURL="&gitpkgURL;"
+	 launch="&launch;"
+         pluginURL="&pluginURL;"
+	 pkgURL="&pkgURL;"
+	 pkgs="&pkgs;"
+	 plugin="&plugin;"
+	 emhttp="&emhttp;">
+
+<CHANGES>
+##&name;
+###2021.11.05.01
+- Reborn with new Dev Debaschdi
+- Update of OpenVPN packages to 2.4.9
+###2019.11.30
+- Update of OpenVPN packages to 2.4.8
+###2019.02.09
+- Update of OpenVPN packages to 2.4.6-2
+###2018.04.26
+- Update of OpenVPN packages to 2.4.6
+###2018.03.03
+-Update of OpenVPN packages to 2.4.5
+###2017.09.29
+-Update of OpenVPN packages to 2.4.4
+###2017.08.14b
+- Moved slackware packages to git repository
+###2017.08.14
+- Minor fixes
+###2017.08.09
+- Added forum support link
+###2017.08.06
+- Added launch link
+###2017.06.30
+- Update DL link to --> https://mirrors.slackware.com/slackware from http://mirrors.slackware.com/slackware
+###2017.06.25
+-Update of OpenVPN packages to 2.4.3
+###2017.05.19
+-Fixed update of the tun/tap protocol
+###2017.04.09b
+-Update of OpenVPN packages to 2.4.1
+##2017.01.31b
+- Fixed clean up function
+###2017.01.31
+- Minor changes
+###2017.01.26
+- Added new settings to keep VPN active during stopping array
+###2017.01.15a
+- Add symlink to /etc/rc.d/rc.openvpnclient
+###2017.01.15
+-Bug fix
+###2016.12.31a
+-Bug fix
+###2016.12.31
+-Update of OpenVPN packages to 2.4
+###2016.05.14d
+-Update of OpenVPN packages to 2.3.11
+###2015.09.01
+-Updated OpenVPN to 2.3.9
+###2015.09.01
+-Updated support for version 6.1
+###2015.08.20
+-Updated security policy for unRAID v6.1
+###2015.08.14
+-Added support for version 6.1
+###2015.07.25
+-moved from disks_mounted to started.
+###2015.05.22
+-Fixed logic when setting up mknod.
+###2015.03.05
+-Added command 'modprobe tun' to solve issues some users have.
+###2015.02.28
+-Added Release notes
+###2015.01.18a
+-Previous Releas
+</CHANGES>
+
+
+<!--
+2013-10-19 - first release
+
+-->
+
+<FILE Name="&pkgs;openvpn-2.4.9-x86_64-1_slack14.2.txz" Run="upgradepkg --install-new">
+<URL>&gitpkgURL;/openvpn-2.4.9-x86_64-1_slack14.2.txz</URL>
+<MD5>5ab3046a28bfa972b27f512f35268dda</MD5>
+</FILE>
+
+<!--
+get from github as tarball
+-->
+<FILE Name="&plugin;/&name;-&version;.tar.gz">
+<URL>"https://github.com/&plgauthor;/openvpn_client_x64/archive/&version;.tar.gz"</URL>
+</FILE>
+
+<!--
+The 'install' script.
+-->
+<FILE Run="/bin/bash">
+<INLINE> 
+mkdir -p /dev/net
+
+if [ ! -c /dev/net/tap ]; then
+	mknod /dev/net/tap c 10 200
+fi
+if [ ! -c /dev/net/tun ]; then
+	mknod /dev/net/tun c 10 200
+fi
+modprobe tap
+modprobe tun
+mkdir -p /tmp/openvpn
+mkdir -p /var/run/&name;/
+
+if [ ! -d &emhttp; ]; then
+	mkdir -p &emhttp;
+fi
+tar -zxf &plugin;/&name;-&version;.tar.gz --strip=1 -C &emhttp;/
+find &plugin; -type f -iname "*.tar.gz" ! -iname "&name;-&version;.tar.gz" -delete
+chmod 0770 &emhttp;/event/*
+chmod 0770 &emhttp;/scripts/*
+mkdir -p /tmp/openvpn
+# create openvpn-writable directory for pid file
+if [ ! -e /var/run/openvpn ]; then
+  mkdir -p /var/run/openvpn
+  chown nobody:users /var/run/openvpn
+  chmod 0777 /var/run/openvpn
+fi
+
+cp -nr &emhttp;/&name; /boot/config/plugins
+ln -sf /usr/local/emhttp/plugins/openvpnclient/scripts/rc.openvpnclient /etc/rc.d/
+</INLINE>
+</FILE>
+
+<!--
+The 'remove' script.
+-->
+<FILE Run="/bin/bash" Method="remove">
+<INLINE>
+&emhttp;/scripts/rc.&name; stop
+rm -rf &emhttp;
+rm -f &plugin;/&name;-&version;.tar.gz
+# Cleanup previous plugin installation
+rm -rf /var/local/emhttp/plugins/&name;
+rm -rf /var/run/&name;
+rm -rf /var/log/&name;.log
+rm -rf /var/log/plugins/&name;
+rm -r /var/run/openvpn/*
+rm -rf /tmp/openvpn
+rm -rf /dev/net
+</INLINE>
+</FILE>
+
+</PLUGIN>

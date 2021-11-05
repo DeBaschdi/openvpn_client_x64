@@ -1,0 +1,130 @@
+Menu="openvpnclient:1"
+Title="Settings"
+---
+
+<div>
+ <form name="openvpn_settings" method="POST" action="/plugins/openvpnclient/openvpnclient_submit.php" target="progressFrame" onsubmit="validateForm();">
+ <table class="tablesorter openvpnclientsettings">
+ <thead><th colspan="2"><b>OpenVPN Client Configuration:&nbsp;<img src='/plugins/openvpnclient/images/new_config.png'></b></th><th class="header"></th></thead>
+<table class="tablesorter">
+
+ <?if ($openvpn_running == "yes"):?>
+    <div><left><b>To change configuration - Press Stop in "Control Action"</b></center></div> <tr>
+  <?endif;?>
+
+    <td align="left">
+  	  <?if ($openvpn_running != "yes"):?>
+        <input type="submit" value="Save Below Configuration">
+      <?endif;?>
+    </td>
+    </tr>
+        
+<?if ($openvpn_running=="no"):?>
+    <tr>
+    <td align="left">Use password to login ?</td>
+	  <td align="left">
+	  <select name="PLG_PASSWORD" id="PLG_PASSWORD" class="tooltip" title="Enter No if the server you are connecting to does not require a username and password, if this is set to Yes, your OVPN file will be updated with your login credentials." size="1" onchange="disable(this.value);"> 
+	  <?=mk_option($openvpn_cfg['PLG_PASSWORD']  , "no", "No");?>
+		<?=mk_option($openvpn_cfg['PLG_PASSWORD']  , "yes", "Yes");?>
+		</select>				
+		</td>
+		</tr>	  
+
+		<tr>
+  	<td align="left">Client configuration file</td>
+		<td align="left">
+		<select name="OVPNCHOOSE" id="OVPNCHOOSE">
+			<?php
+	 		?><option><?=$openvpn_cfg['OVPNCHOOSE'];?></option><?
+	  	$dirName = "/boot/openvpn/";      
+	  	$dirs=array($dirName);
+	   		while($dir=array_pop($dirs)){
+	    		$handle=opendir($dir);
+	      		while($file=readdir($handle)){
+	       			if($file!='.' && $file!='..'){
+	         			$pathfilename=$dir.'/'.$file;
+	           			if(is_file($pathfilename)){
+		     						$checkextension = pathinfo($file, PATHINFO_EXTENSION);	
+			  						if($checkextension === "ovpn"){
+											$pathfilename = str_replace('//', '/', $pathfilename);
+				?><option><? echo "$pathfilename\n "; ?></option><?
+	       		   			}
+	           			}
+	       			else{
+	        			$dirs[]=$pathfilename;
+	       			}
+	      		}
+	    		}
+	   		}
+		?>
+		</select>
+		</td>
+		</tr>	
+
+		<tr>
+		<td align="left">Username for OpenVPN Client:</td>
+		<td><input type="text" style="width:30%" class="tooltip" title="Add your username for your VPN account here" name="USER" id="USER" value="<?=$openvpn_cfg['USER'];?>"></td>
+		</tr>		 
+		
+		<tr>
+		<td align="left">Password for OpenVPN Client:</td>
+		<td align="left"><input type="password" style="width:30%" class="tooltip" title="Add your password for your VPN account here" name="PASS" id="PASS" value="<?=$openvpn_cfg['PASS'];?>"></td>	 
+	 	</tr>
+	        
+	 	<tr>
+		<td align="left">Start OpenVPN during array mounting:</td>
+		<td align="left">
+		<select name="START_ON_MOUNT" id="START_ON_MOUNT" size="1">
+		<?=mk_option($openvpn_cfg['START_ON_MOUNT'], "no", "No");?>
+		<?=mk_option($openvpn_cfg['START_ON_MOUNT'], "yes", "Yes");?>
+		</select>
+		</td>         
+		</tr>
+		          
+		<tr>
+		<td align="left">Disconnect OpenVPN during stopping the array:</td>
+		<td align="left">
+		<select name="DISCONNECT_ON_UMOUNT" id="DISCONNECT_ON_UMOUNT" size="1">
+		<?=mk_option($openvpn_cfg['DISCONNECT_ON_UMOUNT'], "no", "No");?>
+		<?=mk_option($openvpn_cfg['DISCONNECT_ON_UMOUNT'], "yes", "Yes");?>
+		</select>
+		</td>         
+		</tr>
+		
+		<tr>
+		<td align="left">Extended Routing:</td>
+		<td align="left">
+		<select style="width:50%" name="PLG_EXT" id="PLG_EXT" size="1">
+		<?=mk_option($openvpn_cfg['PLG_EXT'], "no", "None");?>
+		<?=mk_option($openvpn_cfg['PLG_EXT'], "Bypass", "Bypass IP addresses from tunnel");?>
+		<?=mk_option($openvpn_cfg['PLG_EXT'], "Specific", "Route only specific IP addresses");?>
+		</select>
+		</td>
+		</tr>
+  <?endif;?>
+ </table>
+ </form>
+</div>
+
+<script type="text/javascript">
+
+
+window.onload = function(){
+ disable(openvpn_settings);
+}
+
+function disable(what)
+{ 
+ if (document.openvpn_settings.PLG_PASSWORD.value=="yes") 
+	{
+	document.openvpn_settings.USER.disabled=false; 
+	document.openvpn_settings.PASS.disabled=false; 
+	}
+else 
+	{
+	document.openvpn_settings.USER.disabled=true; 
+	document.openvpn_settings.PASS.disabled=true; 
+	}
+}
+</script>
+

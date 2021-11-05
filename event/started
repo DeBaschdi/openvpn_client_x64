@@ -1,0 +1,6 @@
+#!/bin/bash
+source /boot/config/plugins/openvpnclient/openvpnclient.cfg
+if [[ "$START_ON_MOUNT" = "yes" ]]; then
+        logger "Starting OpenVPN Client"
+        /usr/local/emhttp/plugins/openvpnclient/scripts/rc.openvpnclient start | logger
+fi

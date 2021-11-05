@@ -1,0 +1,8 @@
+table.tablesorter.openvpnclientsettings{margin-top:-8px;}
+table.tablesorter.openvpnclientsettings th:first-child{width:33%;text-align:left;}
+table.tablesorter.openvpnclientsettings td:first-child{width:33%;text-align:left;}
+table.tablesorter.openvpnclientsettings th:nth-child(2){width:33%;text-align:left;}
+table.tablesorter.openvpnclientsettings td:nth-child(2){width:33%;text-align:left;}
+table.tablesorter.openvpnclientsettings tr>td+td+td{width:33%;white-space:nowrap;}
+table.tablesorter.openvpnclient{margin-top:-20px;}
+table.tablesorter.openvpnclientlog{margin-top:-56px;}
