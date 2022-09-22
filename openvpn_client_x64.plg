@@ -101,9 +101,9 @@
 
 -->
 
-<FILE Name="&pkgs;openvpn-2.4.9-x86_64-1_slack14.2.txz" Run="upgradepkg --install-new">
-<URL>&gitpkgURL;/openvpn-2.4.9-x86_64-1_slack14.2.txz</URL>
-<MD5>5ab3046a28bfa972b27f512f35268dda</MD5>
+<FILE Name="&pkgs;openvpn-2.5.5-x86_64-1.txz" Run="upgradepkg --install-new">
+<URL>&gitpkgURL;/openvpn-2.5.5-x86_64-1.txz</URL>
+<MD5>35a6780b8f697616b5fd3d3a7ee99c01</MD5>
 </FILE>
 
 <!--
