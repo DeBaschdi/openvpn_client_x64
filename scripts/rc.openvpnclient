@@ -14,7 +14,10 @@ PLG_EXT=$PLG_EXT_NEW
 PLG_PASSWORD=$PLG_PASSWORD_NEW
 OVPNCHOOSE=$OVPNCHOOSE_NEW
 DISCONNECT_ON_UMOUNT=$DISCONNECT_ON_UMOUNT_NEW
-
+BRIDGE=$BRIDGE_NEW
+BRIDGE_DEVICE=$BRIDGE_DEVICE_NEW
+DISABLE_IPV6=$DISABLE_IPV6_NEW
+DISABLE_DHCPV4=$DISABLE_DHCPV4_NEW
   write_cfg
   
 }
@@ -32,6 +35,10 @@ write_cfg()
   echo "PLG_PASSWORD=\"$PLG_PASSWORD\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
   echo "OVPNCHOOSE=\"$OVPNCHOOSE\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
   echo "DISCONNECT_ON_UMOUNT=\"$DISCONNECT_ON_UMOUNT\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  echo "BRIDGE=\"$BRIDGE\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  echo "BRIDGE_DEVICE=\"$BRIDGE_DEVICE\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  echo "DISABLE_IPV6=\"$DISABLE_IPV6\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
+  echo "DISABLE_DHCPV4=\"$DISABLE_DHCPV4\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
   
   echo $USER > /boot/config/plugins/openvpnclient/password.txt
   echo $PASS >> /boot/config/plugins/openvpnclient/password.txt
@@ -90,9 +97,15 @@ echo "sudo -H -u root openvpn --writepid /var/run/openvpn/openvpn.pid --script-s
 		   sleep 0.5
 		   echo "Logging in to VPN was successfull"
 
+
 		if [ $PLG_EXT == "Bypass" ]; then
 			echo "Starting bypass IP addresses..."
 			bypasse_IP
+	        fi
+    echo "ficken"
+	  if [ $BRIDGE == "yes" ]; then
+			echo "Bridging " $dev_tun " to " $BRIDGE_DEVICE " "
+			bridge_DEVICE
 	        fi
 
 		if [ $PLG_EXT == "Specific" ]; then
@@ -119,11 +132,22 @@ if [ $alive = "yes" ]; then
 
  echo "Stoping Openvpn Tunnel....."
  sleep 0.5
+ 	  if [ $BRIDGE == "yes" ]; then
+			echo "Removing " $dev_tun "from " $BRIDGE_DEVICE " "
+			unbridge_DEVICE
+	        fi
 
 		kill `ps -ef | grep openvpn.pid | grep -v grep | awk '{print $2}'`
 		rm -f /var/run/openvpn/openvpn.pid
 		rm -rf /tmp/openvpn/openvpn.out
 		echo "Stopped... OK"
+		ebtables -D INPUT --in-interface $tun_ip --protocol ipv6 -j DROP
+    ebtables -D FORWARD --out-interface $tun_ip --protocol ipv6 -j DROP
+    ebtables -D OUTPUT --out-interface $tun_ip --protocol ipv6 -j DROP
+    ebtables -D INPUT --in-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -D INPUT --in-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-source-port 67:68 -j DROP
+    ebtables -D FORWARD --out-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -D FORWARD --out-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-source-port 67:68 -j DROP
 else
     	echo "Client already stoped"
 fi
@@ -248,6 +272,32 @@ if [ -e /boot/openvpn/webbadress.txt ];then
 get_all_IP() {
      /sbin/ifconfig |grep -B1 "inet addr" |awk '{ if ( $1 == "inet" ) { print $2 } else if ( $2 == "Link" ) { printf "%s:" ,$1 } }' |awk -F: '{ print $1 ": " $3 }'
 }
+
+bridge_DEVICE() {
+  brctl addif $BRIDGE_DEVICE $dev_tun
+  tun_ip="`ifconfig $dev_tun | awk '/inet / {print $2}'`"
+  ifconfig $BRIDGE_DEVICE $tun_ip && ifconfig $dev_tun 0.0.0.0
+  if [ $DISABLE_IPV6 = "yes" ]; then
+    sysctl -w net.ipv6.conf."$dev_tun".disable_ipv6=1
+    ebtables -A INPUT --in-interface $tun_ip --protocol ipv6 -j DROP
+    ebtables -A FORWARD --out-interface $tun_ip --protocol ipv6 -j DROP
+    ebtables -A OUTPUT --out-interface $tun_ip --protocol ipv6 -j DROP
+  fi
+
+  if [ $DISABLE_DHCPV4 = "yes" ]; then
+    ebtables -A INPUT --in-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -A INPUT --in-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-source-port 67:68 -j DROP
+    ebtables -A FORWARD --out-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -A FORWARD --out-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-source-port 67:68 -j DROP
+  fi
+  }
+
+unbridge_DEVICE() {
+  tun_ip="`ifconfig $BRIDGE_DEVICE | awk '/inet / {print $2}'`"
+  ifconfig $BRIDGE_DEVICE 0.0.0.0 && ifconfig $dev_tun $tun_ip
+  brctl deldif $BRIDGE_DEVICE $dev_tun
+
+  }
 
 bypasse_IP() {
 

@@ -4,7 +4,7 @@
 <!ENTITY name      "openvpnclient">
 <!ENTITY author    "DeBaschdi">
 <!ENTITY plgauthor    "DeBaschdi">
-<!ENTITY version   "2021.11.05.01">
+<!ENTITY version   "2022.10.10.01">
 <!ENTITY gitURL    "https://github.com/&plgauthor;">
 <!ENTITY gitpkgURL    "&gitURL;/packages/raw/master">
 <!ENTITY launch    "Settings/&name;">
@@ -30,6 +30,9 @@
 
 <CHANGES>
 ##&name;
+###2021.11.05.01
+- Add Options to Disable DHCP through the Tunnel
+- Add Options to Disable IPV6 through the Tunnel
 ###2021.11.05.01
 - Reborn with new Dev Debaschdi
 - Update of OpenVPN packages to 2.4.9
