@@ -144,10 +144,10 @@ if [ $alive = "yes" ]; then
 		ebtables -D INPUT --in-interface $tun_ip --protocol ipv6 -j DROP
     ebtables -D FORWARD --out-interface $tun_ip --protocol ipv6 -j DROP
     ebtables -D OUTPUT --out-interface $tun_ip --protocol ipv6 -j DROP
-    ebtables -D INPUT --in-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
-    ebtables -D INPUT --in-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-source-port 67:68 -j DROP
-    ebtables -D FORWARD --out-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
-    ebtables -D FORWARD --out-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-source-port 67:68 -j DROP
+    ebtables -D FORWARD -i tap5 -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -D FORWARD -o tap5 -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -D INPUT -i tap5 -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -D OUTPUT -o tap5 -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
 else
     	echo "Client already stoped"
 fi
@@ -274,22 +274,25 @@ get_all_IP() {
 }
 
 bridge_DEVICE() {
-  brctl addif $BRIDGE_DEVICE $dev_tun
-  tun_ip="`ifconfig $dev_tun | awk '/inet / {print $2}'`"
-  ifconfig $BRIDGE_DEVICE $tun_ip && ifconfig $dev_tun 0.0.0.0
   if [ $DISABLE_IPV6 = "yes" ]; then
+    modprobe ebtables && modprobe ebtable_filter && modprobe ebt_ip
     sysctl -w net.ipv6.conf."$dev_tun".disable_ipv6=1
-    ebtables -A INPUT --in-interface $tun_ip --protocol ipv6 -j DROP
-    ebtables -A FORWARD --out-interface $tun_ip --protocol ipv6 -j DROP
-    ebtables -A OUTPUT --out-interface $tun_ip --protocol ipv6 -j DROP
+    ebtables -A INPUT --in-interface $dev_tun --protocol ipv6 -j DROP
+    ebtables -A FORWARD --out-interface $dev_tun --protocol ipv6 -j DROP
+    ebtables -A FORWARD --in-interface $dev_tun --protocol ipv6 -j DROP
+    ebtables -A OUTPUT --out-interface $dev_tun --protocol ipv6 -j DROP
   fi
 
   if [ $DISABLE_DHCPV4 = "yes" ]; then
-    ebtables -A INPUT --in-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
-    ebtables -A INPUT --in-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-source-port 67:68 -j DROP
-    ebtables -A FORWARD --out-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
-    ebtables -A FORWARD --out-interface $tun_ip --protocol ipv4 --ip-protocol udp --ip-source-port 67:68 -j DROP
+    modprobe ebtables && modprobe ebtable_filter && modprobe ebt_ip
+    ebtables -I FORWARD -i $dev_tun -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -I FORWARD -o $dev_tun -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -I INPUT -i $dev_tun -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -I OUTPUT -o $dev_tun -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
   fi
+  brctl addif $BRIDGE_DEVICE $dev_tun
+  tun_ip="`ifconfig $dev_tun | awk '/inet / {print $2}'`"
+  ifconfig $BRIDGE_DEVICE $tun_ip && ifconfig $dev_tun 0.0.0.0
   }
 
 unbridge_DEVICE() {
