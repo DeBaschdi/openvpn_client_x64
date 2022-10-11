@@ -4,7 +4,7 @@
 <!ENTITY name      "openvpnclient">
 <!ENTITY author    "DeBaschdi">
 <!ENTITY plgauthor    "DeBaschdi">
-<!ENTITY version   "2022.10.11.03">
+<!ENTITY version   "2022.10.11.04">
 <!ENTITY gitURL    "https://github.com/&plgauthor;">
 <!ENTITY gitpkgURL    "&gitURL;/packages/raw/master">
 <!ENTITY launch    "Settings/&name;">
@@ -30,7 +30,7 @@
 
 <CHANGES>
 ##&name;
-###2022.10.11.03
+###2022.10.11.04
 - Fix ebtable Rules
 ###2021.11.05.01
 - Add Options to Disable DHCP through the Tunnel

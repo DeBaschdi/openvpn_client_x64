@@ -19,14 +19,14 @@ BRIDGE_DEVICE=$BRIDGE_DEVICE_NEW
 DISABLE_IPV6=$DISABLE_IPV6_NEW
 DISABLE_DHCPV4=$DISABLE_DHCPV4_NEW
   write_cfg
-  
+
 }
 
 #################
 # W R I T E C F G
 #################
 write_cfg()
-{ 
+{
   echo "# openvpn client plugin configuration file" > /boot/config/plugins/openvpnclient/openvpnclient.cfg
   echo "USER=\"$USER\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
   echo "PASS=\"$PASS\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
@@ -39,7 +39,7 @@ write_cfg()
   echo "BRIDGE_DEVICE=\"$BRIDGE_DEVICE\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
   echo "DISABLE_IPV6=\"$DISABLE_IPV6\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
   echo "DISABLE_DHCPV4=\"$DISABLE_DHCPV4\"" >> /boot/config/plugins/openvpnclient/openvpnclient.cfg
-  
+
   echo $USER > /boot/config/plugins/openvpnclient/password.txt
   echo $PASS >> /boot/config/plugins/openvpnclient/password.txt
 
@@ -58,16 +58,16 @@ if [ $alive = "no" ]; then
 
   sleep 0.5
 #  update_ovpn_interface
-	  
+
 		if [[ $PLG_PASSWORD = "yes" ]]; then
 	  	echo "Updating the ovpn file..."
 	  	openvpnclient_update_ovpn
 	  else
-	  	echo "No change was done to the ovpn file"	
+	  	echo "No change was done to the ovpn file"
 	  fi
-  
+
   sleep 0.5
- 
+
 echo "Changing to the folder where the openvpn config files belong"
 openvpnpath=${OVPNCHOOSE%/*}
 
@@ -83,17 +83,17 @@ echo "sudo -H -u root openvpn --writepid /var/run/openvpn/openvpn.pid --script-s
 
 
   echo "Starting Openvpn Tunnel: Please Wait..."
-  rm -f /tmp/openvpn/openvpn.out.error 
+  rm -f /tmp/openvpn/openvpn.out.error
   sleep 12
 
-           
+
    # test if we have a connection
   dev_tun=$(extended_device)
 
 	CONNECTED="`ifconfig -a | grep -A 6 $dev_tun`"
 
 		if [ "$CONNECTED" != "" ]; then
-		   echo "Connected successfully on"  $dev_tun  
+		   echo "Connected successfully on"  $dev_tun
 		   sleep 0.5
 		   echo "Logging in to VPN was successfull"
 
@@ -106,7 +106,7 @@ echo "sudo -H -u root openvpn --writepid /var/run/openvpn/openvpn.pid --script-s
 	  if [ $BRIDGE == "yes" ]; then
 			echo "Bridging " $dev_tun " to " $BRIDGE_DEVICE " "
 			bridge_DEVICE
-	        fi
+	  fi
 
 		if [ $PLG_EXT == "Specific" ]; then
 			echo "Starting extended routing..."
@@ -117,7 +117,7 @@ echo "sudo -H -u root openvpn --writepid /var/run/openvpn/openvpn.pid --script-s
 			echo "Not connected! " $dev_tun " not established!!!"
 		   	sleep 0.5
 		   	rm -f /var/run/openvpn/openvpn.pid
-		 	cp /tmp/openvpn/openvpn.out /tmp/openvpn/openvpn.out.error 
+		 	cp /tmp/openvpn/openvpn.out /tmp/openvpn/openvpn.out.error
 		 fi
 	sleep 2
   else
@@ -129,34 +129,36 @@ openvpnclient_stop() {
 alive=$(check_alive)
 
 if [ $alive = "yes" ]; then
-
+dev_tun=$(extended_device)
  echo "Stoping Openvpn Tunnel....."
  sleep 0.5
  	  if [ $BRIDGE == "yes" ]; then
 			echo "Removing " $dev_tun "from " $BRIDGE_DEVICE " "
 			unbridge_DEVICE
-	        fi
+	  fi
 
 		kill `ps -ef | grep openvpn.pid | grep -v grep | awk '{print $2}'`
 		rm -f /var/run/openvpn/openvpn.pid
 		rm -rf /tmp/openvpn/openvpn.out
 		echo "Stopped... OK"
-		ebtables -D INPUT --in-interface $tun_ip --protocol ipv6 -j DROP
-    ebtables -D FORWARD --out-interface $tun_ip --protocol ipv6 -j DROP
-    ebtables -D OUTPUT --out-interface $tun_ip --protocol ipv6 -j DROP
-    ebtables -D FORWARD -i tap5 -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
-    ebtables -D FORWARD -o tap5 -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
-    ebtables -D INPUT -i tap5 -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
-    ebtables -D OUTPUT -o tap5 -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
-else
+
+    ebtables -D INPUT --in-interface $dev_tun --protocol ipv6 -j DROP
+    ebtables -D FORWARD --out-interface $dev_tun --protocol ipv6 -j DROP
+    ebtables -D FORWARD --in-interface $dev_tun --protocol ipv6 -j DROP
+    ebtables -D OUTPUT --out-interface $dev_tun --protocol ipv6 -j DROP
+    ebtables -D FORWARD -i $dev_tun -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -D FORWARD -o $dev_tun -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -D INPUT -i $dev_tun -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+    ebtables -D OUTPUT -o $dev_tun -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j DROP
+
     	echo "Client already stoped"
 fi
 }
 
 openvpnclient_restart() {
 openvpnclient_stop;
-sleep 2	
-openvpnclient_start;	
+sleep 2
+openvpnclient_start;
 }
 
 openvpnclient_status() {
@@ -167,27 +169,27 @@ openvpnclient_status() {
 	  echo ${runningpid:= `cat $process` }
 	done
      else
-       echo ${runningpid:=} 
+       echo ${runningpid:=}
     fi
  }
 
 openvpnclient_update_ovpn() {
-  
+
    if grep -R /boot/config/plugins/openvpnclient/password.txt "$OVPNCHOOSE" ; then
-      echo "The ovpn file already has the option --> /boot/config/plugins/openvpnclient/password.txt" 
+      echo "The ovpn file already has the option --> /boot/config/plugins/openvpnclient/password.txt"
     else
       sed -i '/auth-user-pass/d' "$OVPNCHOOSE"
       echo -e "\nauth-user-pass /boot/config/plugins/openvpnclient/password.txt" >> "$OVPNCHOOSE"
       sleep 0.5
-      echo "The ovpn file was updated with -->  /boot/config/plugins/openvpnclient/password.txt" 
+      echo "The ovpn file was updated with -->  /boot/config/plugins/openvpnclient/password.txt"
    fi
 
     if grep -R status "$OVPNCHOOSE" ; then
-      echo "The ovpn file already has the option --> status /tmp/openvpn/openvpn-status.log" 
+      echo "The ovpn file already has the option --> status /tmp/openvpn/openvpn-status.log"
     else
       echo -e "\nstatus /tmp/openvpn/openvpn-status.log" >> "$OVPNCHOOSE"
       sleep 0.5
-      echo "The ovpn file was updated with -->  status /tmp/openvpn/openvpn-status.log" 
+      echo "The ovpn file was updated with -->  status /tmp/openvpn/openvpn-status.log"
    fi
 }
 
@@ -209,10 +211,10 @@ echo "update_ovpn_interface"
 }
 
 tunnel_IP() {
-	
-tmpinterface=$(check_alive)	
+
+tmpinterface=$(check_alive)
 extended_device >/dev/null
-	
+
 	if [ $tmpinterface = "yes" ]; then
 		curl -s --max-time 15 --silent checkip.dyndns.org | grep -Eo '[0-9\.]+'
 
@@ -223,7 +225,7 @@ extended_device >/dev/null
 
 extended_IP() {
      extended_device >/dev/null
-     echo "`ifconfig $dev_tun | sed -rn 's/.*r:([^ ]+) .*/\1/p'`"	
+     echo "`ifconfig $dev_tun | sed -rn 's/.*r:([^ ]+) .*/\1/p'`"
 }
 
 extended_device() {
@@ -240,10 +242,10 @@ if [ -e /boot/openvpn/webbadress.txt ];then
 	for i in `cat /boot/openvpn/webbadress.txt`
 	   do
 		myip="`ping -c 1 $i | awk 'NR==1{gsub(/\(|\)/,"",$3);print $3}'`"
-#		mynewip="${myip%.*}.0/24"			
-		mynewip="$myip"			
+#		mynewip="${myip%.*}.0/24"
+		mynewip="$myip"
 		echo $myip   "   >>>>>>>   "     $i >> /tmp/openvpn/openvpn.out
-		echo $myip   "   >>>>>>>   "     $i 
+		echo $myip   "   >>>>>>>   "     $i
 		array=( "${array[@]}" "$mynewip" )
 		echo ${array[J]}
 		(( J++ ))
@@ -261,12 +263,12 @@ if [ -e /boot/openvpn/webbadress.txt ];then
 #	  	ip route add ${array[I]} via $tunnelip dev $dev_tun
 	  	ip route add ${array[I]} dev $dev_tun
 	   	echo ip route add ${array[I]} dev $dev_tun  >> /tmp/openvpn/openvpn.out
-	   	echo ip route add ${array[I]} dev $dev_tun 
+	   	echo ip route add ${array[I]} dev $dev_tun
 	 	 done
     else
 			echo "/boot/openvpn/webbadress.txt don't exist" >> /tmp/openvpn/openvpn.out
 			echo "/boot/openvpn/webbadress.txt don't exist"
-    fi	
+    fi
 }
 
 get_all_IP() {
@@ -298,7 +300,7 @@ bridge_DEVICE() {
 unbridge_DEVICE() {
   tun_ip="`ifconfig $BRIDGE_DEVICE | awk '/inet / {print $2}'`"
   ifconfig $BRIDGE_DEVICE 0.0.0.0 && ifconfig $dev_tun $tun_ip
-  brctl deldif $BRIDGE_DEVICE $dev_tun
+  brctl delif $BRIDGE_DEVICE $dev_tun
 
   }
 
@@ -311,10 +313,10 @@ bypasse_IP() {
 	for j in `cat /boot/openvpn/bypassed.txt`
 	  do
 		myip="`ping -c 1 $j | awk 'NR==1{gsub(/\(|\)/,"",$3);print $3}'`"
-#		mynewip="${myip%.*}.0/24"			
-		mynewip="$myip"			
+#		mynewip="${myip%.*}.0/24"
+		mynewip="$myip"
 		echo $myip   "   >>>>>>>   "     $j >> /tmp/openvpn/openvpn.out
-		echo $myip   "   >>>>>>>   "     $j 
+		echo $myip   "   >>>>>>>   "     $j
 		array=( "${array[@]}" "$mynewip" )
 		echo ${array[k]}
 		(( k++ ))
@@ -324,18 +326,18 @@ bypasse_IP() {
 
      echo "Your local gateway = " $localgateway >> /tmp/openvpn/openvpn.out
      echo "Your local gateway = " $localgateway
-  
+
  #echo "********* Bypass IP adresses from VPN tunnel********************"
 	for ((l=0; l < k ; l++))
 	  do
 	   ip route add ${array[l]} via $localgateway dev eth0
 	    echo ip route add ${array[l]} via $localgateway dev eth0  >> /tmp/openvpn/openvpn.out
-	    echo ip route add ${array[l]} via $localgateway dev eth0 
+	    echo ip route add ${array[l]} via $localgateway dev eth0
 	  done
    else
 		echo "/boot/openvpn/bypassed.txt don't exist" >> /tmp/openvpn/openvpn.out
 		echo "/boot/openvpn/bypassed.txt don't exist"
-  fi	
+  fi
 }
 
 extended_running() {
@@ -367,13 +369,13 @@ openvpnclient_getlocalversion() {
 check_alive()
 {
 dev_tun=$(extended_device)
-	
+
  if [ $(ifconfig | grep $dev_tun | grep -v grep | wc -l | tr -s "\n") -eq 0 ]; then
 	 echo "no"
  else
 	echo "yes"
  fi
-	
+
 }
 
 # read our configuration
@@ -415,7 +417,7 @@ case "$1" in
   ;;
 'writecfg')
   write_cfg
-  ;; 
+  ;;
 'get_all_IP')
   get_all_IP
   ;;
@@ -427,6 +429,6 @@ case "$1" in
   ;;
 
   *)
-  
+
   echo "usage $0 start|stop"
 esac
