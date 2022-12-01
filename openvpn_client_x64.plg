@@ -4,7 +4,7 @@
 <!ENTITY name      "openvpnclient">
 <!ENTITY author    "DeBaschdi">
 <!ENTITY plgauthor    "DeBaschdi">
-<!ENTITY version   "2022.10.11.04">
+<!ENTITY version   "2022.12.01.01">
 <!ENTITY gitURL    "https://github.com/&plgauthor;">
 <!ENTITY gitpkgURL    "&gitURL;/packages/raw/master">
 <!ENTITY launch    "Settings/&name;">
@@ -30,6 +30,8 @@
 
 <CHANGES>
 ##&name;
+###2022.12.01.01
+- Update ovpn Package
 ###2022.10.11.04
 - Fix ebtable Rules
 ###2021.11.05.01
@@ -106,9 +108,9 @@
 
 -->
 
-<FILE Name="&pkgs;openvpn-2.5.5-x86_64-1.txz" Run="upgradepkg --install-new">
-<URL>&gitpkgURL;/openvpn-2.5.5-x86_64-1.txz</URL>
-<MD5>35a6780b8f697616b5fd3d3a7ee99c01</MD5>
+<FILE Name="&pkgs;openvpn-2.5.8-x86_64-1.txz" Run="upgradepkg --install-new">
+<URL>&gitpkgURL;/openvpn-2.5.8-x86_64-1.txz</URL>
+<MD5>11f9ed20532b58c1533f42eb1a35c241</MD5>
 </FILE>
 
 <!--
